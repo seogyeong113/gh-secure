@@ -162,25 +162,21 @@ check_permissions() {
   echo ""
   echo -e "${BOLD}=== Repository Check ===${RESET}"
 
-  local repo_json
-  if ! repo_json=$(gh api "repos/${OWNER}/${REPO_NAME}" 2>/dev/null); then
+  local repo_info
+  if ! repo_info=$(gh api "repos/${OWNER}/${REPO_NAME}" --jq '[.private, .permissions.admin, .permissions.maintain] | @tsv' 2>/dev/null); then
     print_error "Repository ${OWNER}/${REPO_NAME} not found or you don't have access"
     exit 1
   fi
 
-  local visibility
-  visibility=$(echo "$repo_json" | gh api --input - --jq '.private' 2>/dev/null || echo "$repo_json" | python3 -c "import sys,json; print(json.load(sys.stdin).get('private', True))" 2>/dev/null)
-  if [ "$visibility" = "true" ]; then
+  local is_private has_admin has_maintain
+  read -r is_private has_admin has_maintain <<< "$repo_info"
+
+  if [ "$is_private" = "true" ]; then
     echo -e "  Repository visibility: Private"
     print_warning "This tool is designed for public repositories."
   else
     echo -e "  Repository visibility: Public"
   fi
-
-  local has_admin
-  has_admin=$(echo "$repo_json" | gh api --input - --jq '.permissions.admin // false' 2>/dev/null || echo "false")
-  local has_maintain
-  has_maintain=$(echo "$repo_json" | gh api --input - --jq '.permissions.maintain // false' 2>/dev/null || echo "false")
 
   if [ "$has_admin" = "true" ]; then
     print_success "You have admin permissions on ${OWNER}/${REPO_NAME}"
@@ -495,11 +491,9 @@ enable_code_scanning() {
   fi
 
   local payload='{"state":"configured","query_suite":"default"}'
-  local result
-  if result=$(echo "$payload" | gh api "repos/${OWNER}/${REPO_NAME}/code-scanning/default-setup" --method PATCH --input - 2>&1); then
+  local run_url
+  if run_url=$(echo "$payload" | gh api "repos/${OWNER}/${REPO_NAME}/code-scanning/default-setup" --method PATCH --input - --jq '.run_url // empty' 2>&1); then
     print_success "Code scanning default setup enabled"
-    local run_url
-    run_url=$(echo "$result" | gh api --input - --jq '.run_url // empty' 2>/dev/null || true)
     if [ -n "$run_url" ]; then
       print_info "CodeQL analysis triggered: ${run_url}"
     fi
