@@ -715,7 +715,9 @@ main() {
   echo "  Next steps:"
   echo "    • View security settings: https://github.com/${OWNER}/${REPO_NAME}/settings/security_analysis"
   echo "    • View security overview: https://github.com/${OWNER}/${REPO_NAME}/security"
-  echo "    • Add a SECURITY.md file with your security policy"
+  if ! gh api "repos/${OWNER}/${REPO_NAME}/community/profile" --jq '.files.security.url // empty' 2>/dev/null | grep -q .; then
+    echo "    • Add a SECURITY.md file with your security policy"
+  fi
   echo "    • Monitor security alerts regularly"
   echo ""
 
