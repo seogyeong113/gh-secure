@@ -642,23 +642,23 @@ main() {
 
   if feature_selected "branch-protection"; then
     feature_names+=("Branch Protection")
-    enable_branch_protection; rc=$?; results+=($rc)
+    enable_branch_protection && rc=0 || rc=$?; results+=($rc)
   fi
   if feature_selected "vulnerability-reporting"; then
     feature_names+=("Vulnerability Reporting")
-    enable_vulnerability_reporting; rc=$?; results+=($rc)
+    enable_vulnerability_reporting && rc=0 || rc=$?; results+=($rc)
   fi
   if feature_selected "secret-scanning"; then
     feature_names+=("Secret Scanning")
-    enable_secret_scanning; rc=$?; results+=($rc)
+    enable_secret_scanning && rc=0 || rc=$?; results+=($rc)
   fi
   if feature_selected "dependabot"; then
     feature_names+=("Dependabot")
-    enable_dependabot; rc=$?; results+=($rc)
+    enable_dependabot && rc=0 || rc=$?; results+=($rc)
   fi
   if feature_selected "code-scanning"; then
     feature_names+=("Code Scanning (CodeQL)")
-    enable_code_scanning; rc=$?; results+=($rc)
+    enable_code_scanning && rc=0 || rc=$?; results+=($rc)
   fi
 
   # Summary
