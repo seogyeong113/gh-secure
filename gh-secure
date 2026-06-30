@@ -309,7 +309,7 @@ enable_branch_protection() {
 
   if check_branch_protection; then
     print_success "Already enabled — skipping"
-    return 0
+    return 2
   fi
 
   if ! $ENABLE_ALL; then
@@ -370,7 +370,7 @@ enable_vulnerability_reporting() {
 
   if check_vulnerability_reporting; then
     print_success "Already enabled — skipping"
-    return 0
+    return 2
   fi
 
   if ! $ENABLE_ALL; then
@@ -417,7 +417,7 @@ enable_secret_scanning() {
 
   if check_push_protection; then
     print_success "Push protection already enabled — skipping"
-    return 0
+    return 2
   fi
 
   if ! $ENABLE_ALL; then
@@ -460,7 +460,7 @@ enable_dependabot() {
 
   if $alerts_ok && $updates_ok; then
     print_success "Already enabled — skipping"
-    return 0
+    return 2
   fi
 
   if ! $ENABLE_ALL; then
@@ -513,7 +513,7 @@ enable_code_scanning() {
 
   if check_code_scanning; then
     print_success "Already enabled — skipping"
-    return 0
+    return 2
   fi
 
   if ! $ENABLE_ALL; then
@@ -637,20 +637,28 @@ main() {
   separator "Configuring Security Features"
 
   local results=()
+  local feature_names=()
+  local rc
+
   if feature_selected "branch-protection"; then
-    enable_branch_protection && results+=(1) || results+=(0)
+    feature_names+=("Branch Protection")
+    enable_branch_protection; rc=$?; results+=($rc)
   fi
   if feature_selected "vulnerability-reporting"; then
-    enable_vulnerability_reporting && results+=(1) || results+=(0)
+    feature_names+=("Vulnerability Reporting")
+    enable_vulnerability_reporting; rc=$?; results+=($rc)
   fi
   if feature_selected "secret-scanning"; then
-    enable_secret_scanning && results+=(1) || results+=(0)
+    feature_names+=("Secret Scanning")
+    enable_secret_scanning; rc=$?; results+=($rc)
   fi
   if feature_selected "dependabot"; then
-    enable_dependabot && results+=(1) || results+=(0)
+    feature_names+=("Dependabot")
+    enable_dependabot; rc=$?; results+=($rc)
   fi
   if feature_selected "code-scanning"; then
-    enable_code_scanning && results+=(1) || results+=(0)
+    feature_names+=("Code Scanning (CodeQL)")
+    enable_code_scanning; rc=$?; results+=($rc)
   fi
 
   # Summary
@@ -663,15 +671,44 @@ main() {
     echo ""
   fi
 
-  local success=0
-  for r in "${results[@]}"; do
-    ((success += r))
+  # Categorize results: 0=newly enabled, 1=skipped/failed, 2=already enabled
+  local newly=() already=() failed=()
+  for i in "${!results[@]}"; do
+    case "${results[$i]}" in
+      0) newly+=("${feature_names[$i]}") ;;
+      2) already+=("${feature_names[$i]}") ;;
+      *) failed+=("${feature_names[$i]}") ;;
+    esac
   done
 
+  if [ ${#newly[@]} -gt 0 ]; then
+    echo -e "  ${GREEN}${BOLD}Newly enabled:${RESET}"
+    for f in "${newly[@]}"; do
+      echo -e "    ${GREEN}✓${RESET} ${f}"
+    done
+  fi
+
+  if [ ${#already[@]} -gt 0 ]; then
+    echo -e "  ${BLUE}${BOLD}Already enabled:${RESET}"
+    for f in "${already[@]}"; do
+      echo -e "    ${BLUE}✓${RESET} ${f}"
+    done
+  fi
+
+  if [ ${#failed[@]} -gt 0 ]; then
+    echo -e "  ${YELLOW}${BOLD}Skipped / failed:${RESET}"
+    for f in "${failed[@]}"; do
+      echo -e "    ${YELLOW}⊘${RESET} ${f}"
+    done
+  fi
+
+  echo ""
+  local total=${#results[@]}
+  local ok=$(( ${#newly[@]} + ${#already[@]} ))
   if $DRY_RUN; then
-    echo -e "  ${GREEN}✓${RESET} Would enable ${success}/${#results[@]} security features for ${OWNER}/${REPO_NAME}"
+    echo -e "  ${GREEN}✓${RESET} ${ok}/${total} features would be enabled for ${OWNER}/${REPO_NAME} (${#newly[@]} new, ${#already[@]} already)"
   else
-    echo -e "  ${GREEN}✓${RESET} Enabled ${success}/${#results[@]} security features for ${OWNER}/${REPO_NAME}"
+    echo -e "  ${GREEN}✓${RESET} ${ok}/${total} features enabled for ${OWNER}/${REPO_NAME} (${#newly[@]} new, ${#already[@]} already)"
   fi
 
   echo ""
