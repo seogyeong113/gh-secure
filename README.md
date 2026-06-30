@@ -16,12 +16,14 @@ gh extension install <owner>/gh-secure
 ## Usage
 
 ```bash
-gh secure                          # Interactive mode on current repo
-gh secure --all                    # Enable all features, current repo
-gh secure --repo owner/repo        # Target a specific repository
-gh secure --all --dry-run          # Preview what would be enabled
-gh secure status                   # Check current feature status
-gh secure status --repo owner/repo # Check status of specific repo
+gh secure                                  # Interactive mode, all features
+gh secure --all                            # Enable all features, no prompts
+gh secure branch-protection dependabot     # Enable only these two features
+gh secure bp ss cs --all                   # Enable 3 features, no prompts
+gh secure --repo owner/repo code-scanning  # Enable CodeQL on specific repo
+gh secure --all --dry-run                  # Preview what would be enabled
+gh secure status                           # Check current feature status
+gh secure status --repo owner/repo         # Check status of specific repo
 ```
 
 ### Flags
@@ -33,6 +35,18 @@ gh secure status --repo owner/repo # Check status of specific repo
 | `-n`, `--dry-run` | Simulate changes without applying them |
 | `-v`, `--version` | Print version |
 | `-h`, `--help` | Show help message |
+
+### Feature Names
+
+Pass one or more feature names to enable only specific features. If none are specified, all features are included.
+
+| Feature | Shorthand |
+|---------|-----------|
+| `branch-protection` | `bp` |
+| `vulnerability-reporting` | `vr` |
+| `secret-scanning` | `ss` |
+| `dependabot` | `dep` |
+| `code-scanning` | `cs` |
 
 ## Security Features
 

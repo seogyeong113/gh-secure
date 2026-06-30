@@ -26,6 +26,45 @@ REPO=""
 OWNER=""
 REPO_NAME=""
 SUBCOMMAND=""
+SELECTED_FEATURES=()
+
+# Valid feature names (long and short forms)
+ALL_FEATURES=("branch-protection" "vulnerability-reporting" "secret-scanning" "dependabot" "code-scanning")
+
+is_valid_feature() {
+  case "$1" in
+    branch-protection|bp) return 0 ;;
+    vulnerability-reporting|vr) return 0 ;;
+    secret-scanning|ss) return 0 ;;
+    dependabot|dep) return 0 ;;
+    code-scanning|cs) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+normalize_feature() {
+  case "$1" in
+    branch-protection|bp) echo "branch-protection" ;;
+    vulnerability-reporting|vr) echo "vulnerability-reporting" ;;
+    secret-scanning|ss) echo "secret-scanning" ;;
+    dependabot|dep) echo "dependabot" ;;
+    code-scanning|cs) echo "code-scanning" ;;
+  esac
+}
+
+feature_selected() {
+  local feature="$1"
+  # If no features specified, all are selected
+  if [ ${#SELECTED_FEATURES[@]} -eq 0 ]; then
+    return 0
+  fi
+  for f in "${SELECTED_FEATURES[@]}"; do
+    if [ "$f" = "$feature" ]; then
+      return 0
+    fi
+  done
+  return 1
+}
 
 # ─── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -59,7 +98,7 @@ usage() {
 GitHub Security Features Enablement Tool
 
 Usage:
-  gh secure [flags]
+  gh secure [flags] [feature ...]
   gh secure status [--repo <owner/repo>]
 
 Commands:
@@ -72,20 +111,24 @@ Flags:
   -v, --version             Print version
   -h, --help                Show this help message
 
-Security Features:
-  1. Branch Protection        Protect your main branch from unauthorized changes
-  2. Vulnerability Reporting  Allow private security vulnerability reports
-  3. Secret Scanning          Detect exposed secrets with push protection
-  4. Dependabot               Alerts and automated updates for vulnerable deps
-  5. Code Scanning (CodeQL)   Static analysis and Actions workflow security
+Features (pass one or more to enable only specific features):
+  branch-protection   (bp)   Protect your main branch from unauthorized changes
+  vulnerability-reporting (vr) Allow private security vulnerability reports
+  secret-scanning     (ss)   Detect exposed secrets with push protection
+  dependabot          (dep)  Alerts and automated updates for vulnerable deps
+  code-scanning       (cs)   Static analysis and Actions workflow security
+
+  If no features are specified, all features are included.
 
 Examples:
-  gh secure                          # Interactive mode on current repo
-  gh secure --all                    # Enable all features, current repo
-  gh secure --repo owner/repo        # Target a specific repository
-  gh secure --all --dry-run          # Preview what would be enabled
-  gh secure status                   # Check current feature status
-  gh secure status --repo owner/repo # Check status of specific repo
+  gh secure                                  # Interactive mode, all features
+  gh secure --all                            # Enable all features, no prompts
+  gh secure branch-protection dependabot     # Enable only these two features
+  gh secure bp ss cs --all                   # Enable 3 features, no prompts
+  gh secure --repo owner/repo code-scanning  # Enable CodeQL on specific repo
+  gh secure --all --dry-run                  # Preview what would be enabled
+  gh secure status                           # Check current feature status
+  gh secure status --repo owner/repo         # Check status of specific repo
 EOF
 }
 
@@ -116,9 +159,13 @@ parse_args() {
         SUBCOMMAND="status"
         ;;
       *)
-        echo "Unknown argument: $1"
-        usage
-        exit 1
+        if is_valid_feature "$1"; then
+          SELECTED_FEATURES+=("$(normalize_feature "$1")")
+        else
+          echo "Unknown argument: $1"
+          echo "Run 'gh secure --help' for usage."
+          exit 1
+        fi
         ;;
     esac
     shift
@@ -532,23 +579,27 @@ main() {
 
   # Show feature list
   separator "Security Features to Configure"
-  echo "  1. Branch Protection        — Protect main branch"
-  echo "  2. Vulnerability Reporting  — Private security reports"
-  echo "  3. Secret Scanning          — Detect & block secrets"
-  echo "  4. Dependabot               — Dependency vulnerability alerts"
-  echo "  5. Code Scanning (CodeQL)   — Static analysis & Actions security"
+
+  local selecting_subset=false
+  if [ ${#SELECTED_FEATURES[@]} -gt 0 ]; then
+    selecting_subset=true
+  fi
+
+  local feature_labels=("Branch Protection" "Vulnerability Reporting" "Secret Scanning" "Dependabot" "Code Scanning (CodeQL)")
+  local feature_descs=("Protect main branch" "Private security reports" "Detect & block secrets" "Dependency vulnerability alerts" "Static analysis & Actions security")
+  for i in "${!ALL_FEATURES[@]}"; do
+    if feature_selected "${ALL_FEATURES[$i]}"; then
+      echo -e "  ${GREEN}●${RESET} ${feature_labels[$i]}  — ${feature_descs[$i]}"
+    else
+      echo -e "  ${RESET}○ ${feature_labels[$i]}  — skipped${RESET}"
+    fi
+  done
 
   # If not --all, ask for mode
   if ! $ENABLE_ALL; then
-    echo ""
-    echo "Choose enablement mode:"
-    echo "  1. Enable all features at once (single confirmation)"
-    echo "  2. Enable features step-by-step (confirm each individually)"
-    printf "\nSelect option (1 or 2): "
-    read -r mode_choice
-
-    if [ "$mode_choice" = "1" ]; then
-      printf "\nEnable all features on %s? (y/n): " "${OWNER}/${REPO_NAME}"
+    if $selecting_subset; then
+      local count=${#SELECTED_FEATURES[@]}
+      printf "\nEnable %d selected feature(s) on %s? (y/n): " "$count" "${OWNER}/${REPO_NAME}"
       read -r answer
       if [[ ! "$answer" =~ ^[Yy]$ ]]; then
         echo "Aborted."
@@ -556,11 +607,28 @@ main() {
       fi
       ENABLE_ALL=true
     else
-      printf "\nProceed with step-by-step enablement? (y/n): "
-      read -r answer
-      if [[ ! "$answer" =~ ^[Yy]$ ]]; then
-        echo "Aborted."
-        exit 0
+      echo ""
+      echo "Choose enablement mode:"
+      echo "  1. Enable all features at once (single confirmation)"
+      echo "  2. Enable features step-by-step (confirm each individually)"
+      printf "\nSelect option (1 or 2): "
+      read -r mode_choice
+
+      if [ "$mode_choice" = "1" ]; then
+        printf "\nEnable all features on %s? (y/n): " "${OWNER}/${REPO_NAME}"
+        read -r answer
+        if [[ ! "$answer" =~ ^[Yy]$ ]]; then
+          echo "Aborted."
+          exit 0
+        fi
+        ENABLE_ALL=true
+      else
+        printf "\nProceed with step-by-step enablement? (y/n): "
+        read -r answer
+        if [[ ! "$answer" =~ ^[Yy]$ ]]; then
+          echo "Aborted."
+          exit 0
+        fi
       fi
     fi
   fi
@@ -569,11 +637,21 @@ main() {
   separator "Configuring Security Features"
 
   local results=()
-  enable_branch_protection         && results+=(1) || results+=(0)
-  enable_vulnerability_reporting   && results+=(1) || results+=(0)
-  enable_secret_scanning           && results+=(1) || results+=(0)
-  enable_dependabot                && results+=(1) || results+=(0)
-  enable_code_scanning             && results+=(1) || results+=(0)
+  if feature_selected "branch-protection"; then
+    enable_branch_protection && results+=(1) || results+=(0)
+  fi
+  if feature_selected "vulnerability-reporting"; then
+    enable_vulnerability_reporting && results+=(1) || results+=(0)
+  fi
+  if feature_selected "secret-scanning"; then
+    enable_secret_scanning && results+=(1) || results+=(0)
+  fi
+  if feature_selected "dependabot"; then
+    enable_dependabot && results+=(1) || results+=(0)
+  fi
+  if feature_selected "code-scanning"; then
+    enable_code_scanning && results+=(1) || results+=(0)
+  fi
 
   # Summary
   separator "Summary"
