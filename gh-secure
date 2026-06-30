@@ -589,9 +589,9 @@ main() {
   local feature_descs=("Protect main branch" "Private security reports" "Detect & block secrets" "Dependency vulnerability alerts" "Static analysis & Actions security")
   for i in "${!ALL_FEATURES[@]}"; do
     if feature_selected "${ALL_FEATURES[$i]}"; then
-      echo -e "  ${GREEN}●${RESET} ${feature_labels[$i]}  — ${feature_descs[$i]}"
+      echo -e "  ${GREEN}▶ ${BOLD}${feature_labels[$i]}${RESET}  — ${feature_descs[$i]}"
     else
-      echo -e "  ${RESET}○ ${feature_labels[$i]}  — skipped${RESET}"
+      echo -e "  ${YELLOW}  ${feature_labels[$i]}  — skipped${RESET}"
     fi
   done
 
