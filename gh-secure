@@ -77,7 +77,7 @@ Security Features:
   2. Vulnerability Reporting  Allow private security vulnerability reports
   3. Secret Scanning          Detect exposed secrets with push protection
   4. Dependabot               Alerts and automated updates for vulnerable deps
-  5. Code Scanning (CodeQL)   Static analysis for security vulnerabilities
+  5. Code Scanning (CodeQL)   Static analysis and Actions workflow security
 
 Examples:
   gh secure                          # Interactive mode on current repo
@@ -472,11 +472,13 @@ enable_code_scanning() {
   if ! $ENABLE_ALL; then
     echo ""
     echo "  Why: Uses static analysis (CodeQL) to find security vulnerabilities"
-    echo "  like SQL injection, XSS, and path traversal in your code."
+    echo "  like SQL injection, XSS, and path traversal in your code, and detects"
+    echo "  vulnerable GitHub Actions workflows (e.g. script injection, unsafe inputs)."
     echo ""
     echo "  This will:"
     echo "    • Automatically scan code on every push and pull request"
     echo "    • Detect common security vulnerabilities and coding errors"
+    echo "    • Identify vulnerable GitHub Actions workflows"
     echo "    • Use GitHub's default CodeQL configuration (no workflow file needed)"
   fi
 
@@ -534,7 +536,7 @@ main() {
   echo "  2. Vulnerability Reporting  — Private security reports"
   echo "  3. Secret Scanning          — Detect & block secrets"
   echo "  4. Dependabot               — Dependency vulnerability alerts"
-  echo "  5. Code Scanning (CodeQL)   — Static analysis"
+  echo "  5. Code Scanning (CodeQL)   — Static analysis & Actions security"
 
   # If not --all, ask for mode
   if ! $ENABLE_ALL; then

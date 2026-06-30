@@ -55,7 +55,7 @@ Detects exposed secrets (API keys, tokens, passwords) and enables push protectio
 Monitors dependencies for known vulnerabilities, alerts you, and automatically creates PRs to update vulnerable packages.
 
 ### 5. Code Scanning (CodeQL)
-Uses GitHub's CodeQL static analysis engine to detect security vulnerabilities (SQL injection, XSS, path traversal, etc.) on every push and pull request. Uses GitHub's default setup — no workflow file needed.
+Uses GitHub's CodeQL static analysis engine to detect security vulnerabilities (SQL injection, XSS, path traversal, etc.) and vulnerable GitHub Actions workflows (script injection, unsafe inputs) on every push and pull request. Uses GitHub's default setup — no workflow file needed.
 
 ## Troubleshooting
 

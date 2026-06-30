@@ -55,7 +55,7 @@ This repository has the following security features enabled:
 - ✅ Private Vulnerability Reporting
 - ✅ Secret Scanning with Push Protection
 - ✅ Dependabot Security Updates
-- ✅ Code Scanning (CodeQL)
+- ✅ Code Scanning (CodeQL) including Actions workflow security
 
 ## Security Best Practices
 
