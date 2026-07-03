@@ -286,7 +286,7 @@ show_status() {
   for i in "${!features[@]}"; do
     if ${checks[$i]}; then
       print_success "${features[$i]}"
-      ((enabled++))
+      enabled=$((enabled + 1))
     else
       print_error "${features[$i]} — not enabled"
     fi
