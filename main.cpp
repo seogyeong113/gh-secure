@@ -10,9 +10,9 @@ int main()
         {
             case 10;
             case 9; grede='A'; break;
-            case 8;
-            case 7;
-            case 6;
+            case 8; grede='B'; break;
+            case 7; grede='C'; break;
+            case 6; grede='D'; break;
         }
        
 
